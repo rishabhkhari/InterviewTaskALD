@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: "grafana"
+    volumes:
+      - 'grafana-data:/var/lib/grafana'
+      - 'grafana-config:/etc/grafana'
+      - 'grafana-storage:/var/lib/grafana'
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SERVER_ROOT_URL=http://ald-expert.com/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`ald-expert.com`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.middlewares=strip-prefix"
+
+  traefik:
+    image: "traefik:v2.5"
+    container_name: "traefik"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.strip-prefix.stripprefix.prefixes=/grafana"
+      - "traefik.http.middlewares.strip-prefix.stripprefix.forceSlash=false"
+
+volumes:
+  grafana-data: {}
+  grafana-config: {}
+  grafana-storage: {}
